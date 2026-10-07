@@ -1,17 +1,12 @@
 <?php
 require_once __DIR__ . '/../model/pec.php';
-require_once __DIR__ . '/patientdao.php';
+require_once __DIR__ . '/../config/Database.php';
 
 class pecdao {
     private $conn;
 
     public function __construct() {
-        try {
-            $this->conn = new PDO('mysql:host=localhost;dbname=mvc_gestion', 'root', '');
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch (PDOException $e) {
-            die('Erreur de connexion à la base de données : ' . $e->getMessage());
-        }
+        $this->conn = Database::getInstance();
     }
 
     // Récupère tous les patients inscrits pour alimenter le select.
@@ -112,3 +107,4 @@ class pecdao {
         return (int) $stmt->fetchColumn();
     }
 }
+

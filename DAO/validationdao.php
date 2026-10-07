@@ -1,37 +1,15 @@
 <?php
 require_once __DIR__ . '/../model/validation.php';
+require_once __DIR__ . '/../config/Database.php';
 
 class validationdao {
     private $conn;
 
     public function __construct() {
-        $this->conn = null;
-        $this->connect();
-    }
-
-    private function connect() {
-        if ($this->conn instanceof PDO) {
-            return $this->conn;
-        }
-
-        try {
-            $this->conn = new PDO("mysql:host=localhost;dbname=mvc_gestion;charset=utf8mb4", "root", "", [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            ]);
-            return $this->conn;
-        } catch (PDOException $e) {
-            $this->conn = null;
-            return null;
-        }
+        $this->conn = Database::getInstance();
     }
 
     public function getAllValidations() {
-        $conn = $this->connect();
-        if (!$conn) {
-            return [];
-        }
-
         $validations = [];
         try {
             $query = "SELECT v.*, 
@@ -42,7 +20,7 @@ class validationdao {
                       JOIN students s ON i.student_id = s.id
                       ORDER BY v.defense_date DESC, v.id DESC";
                       
-            $stmt = $conn->query($query);
+            $stmt = $this->conn->query($query);
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $validations[] = new validation(
                     $row['id'],
@@ -64,11 +42,6 @@ class validationdao {
     }
 
     public function getValidationById($id) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return null;
-        }
-
         try {
             $query = "SELECT v.*, 
                              CONCAT(s.last_name, ' ', s.first_name) AS student_name,
@@ -77,7 +50,7 @@ class validationdao {
                       JOIN internships i ON v.internship_id = i.id
                       JOIN students s ON i.student_id = s.id
                       WHERE v.id = ?";
-            $stmt = $conn->prepare($query);
+            $stmt = $this->conn->prepare($query);
             $stmt->execute([$id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
@@ -101,13 +74,8 @@ class validationdao {
     }
 
     public function createValidation(Validation $validation) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return false;
-        }
-
         try {
-            $stmt = $conn->prepare("INSERT INTO validations (internship_id, defense_date, jury_members, final_grade, status) VALUES (?, ?, ?, ?, ?)");
+            $stmt = $this->conn->prepare("INSERT INTO validations (internship_id, defense_date, jury_members, final_grade, status) VALUES (?, ?, ?, ?, ?)");
             return $stmt->execute([
                 $validation->getInternshipId(),
                 $validation->getDefenseDate() ?: null,
@@ -122,13 +90,8 @@ class validationdao {
     }
 
     public function updateValidation(Validation $validation) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return false;
-        }
-
         try {
-            $stmt = $conn->prepare("UPDATE validations SET internship_id = ?, defense_date = ?, jury_members = ?, final_grade = ?, status = ? WHERE id = ?");
+            $stmt = $this->conn->prepare("UPDATE validations SET internship_id = ?, defense_date = ?, jury_members = ?, final_grade = ?, status = ? WHERE id = ?");
             return $stmt->execute([
                 $validation->getInternshipId(),
                 $validation->getDefenseDate() ?: null,
@@ -144,13 +107,8 @@ class validationdao {
     }
 
     public function deleteValidation($id) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return false;
-        }
-
         try {
-            $stmt = $conn->prepare("DELETE FROM validations WHERE id = ?");
+            $stmt = $this->conn->prepare("DELETE FROM validations WHERE id = ?");
             return $stmt->execute([$id]);
         } catch (PDOException $e) {
             error_log("Erreur deleteValidation: " . $e->getMessage());
@@ -159,13 +117,8 @@ class validationdao {
     }
 
     public function countValidations() {
-        $conn = $this->connect();
-        if (!$conn) {
-            return 0;
-        }
-
         try {
-            $stmt = $conn->query("SELECT COUNT(*) FROM validations");
+            $stmt = $this->conn->query("SELECT COUNT(*) FROM validations");
             return (int) $stmt->fetchColumn();
         } catch (PDOException $e) {
             return 0;
@@ -173,13 +126,8 @@ class validationdao {
     }
 
     public function countValidationsByStatus($status) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return 0;
-        }
-
         try {
-            $stmt = $conn->prepare("SELECT COUNT(*) FROM validations WHERE status = ?");
+            $stmt = $this->conn->prepare("SELECT COUNT(*) FROM validations WHERE status = ?");
             $stmt->execute([$status]);
             return (int) $stmt->fetchColumn();
         } catch (PDOException $e) {
@@ -188,11 +136,6 @@ class validationdao {
     }
 
     public function getValidationSuccessRate() {
-        $conn = $this->connect();
-        if (!$conn) {
-            return 0;
-        }
-
         try {
             $total = $this->countValidations();
             if ($total === 0) {
@@ -206,13 +149,8 @@ class validationdao {
     }
 
     public function getUpcomingDefenses($days = 7) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return [];
-        }
-
         try {
-            $stmt = $conn->prepare("SELECT v.*, 
+            $stmt = $this->conn->prepare("SELECT v.*, 
                                          CONCAT(s.last_name, ' ', s.first_name) AS student_name,
                                          i.company_name
                                   FROM validations v
@@ -227,3 +165,4 @@ class validationdao {
         }
     }
 }
+

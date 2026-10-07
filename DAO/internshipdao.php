@@ -1,37 +1,15 @@
 <?php
 require_once __DIR__ . '/../model/internship.php';
+require_once __DIR__ . '/../config/Database.php';
 
 class internshipdao {
     private $conn;
 
     public function __construct() {
-        $this->conn = null;
-        $this->connect();
-    }
-
-    private function connect() {
-        if ($this->conn instanceof PDO) {
-            return $this->conn;
-        }
-
-        try {
-            $this->conn = new PDO("mysql:host=localhost;dbname=mvc_gestion;charset=utf8mb4", "root", "", [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            ]);
-            return $this->conn;
-        } catch (PDOException $e) {
-            $this->conn = null;
-            return null;
-        }
+        $this->conn = Database::getInstance();
     }
 
     public function getAllInternships() {
-        $conn = $this->connect();
-        if (!$conn) {
-            return [];
-        }
-
         $internships = [];
         try {
             $query = "SELECT i.*, CONCAT(s.last_name, ' ', s.first_name) AS student_name 
@@ -39,7 +17,7 @@ class internshipdao {
                       JOIN students s ON i.student_id = s.id 
                       ORDER BY i.start_date DESC";
                       
-            $stmt = $conn->query($query);
+            $stmt = $this->conn->query($query);
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $internships[] = new Internship(
                     $row['id'],
@@ -60,17 +38,12 @@ class internshipdao {
     }
 
     public function getInternshipById($id) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return null;
-        }
-
         try {
             $query = "SELECT i.*, CONCAT(s.last_name, ' ', s.first_name) AS student_name 
                       FROM internships i 
                       JOIN students s ON i.student_id = s.id 
                       WHERE i.id = ?";
-            $stmt = $conn->prepare($query);
+            $stmt = $this->conn->prepare($query);
             $stmt->execute([$id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
@@ -93,13 +66,8 @@ class internshipdao {
     }
 
     public function createInternship(Internship $internship) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return false;
-        }
-
         try {
-            $stmt = $conn->prepare("INSERT INTO internships (student_id, company_name, type, start_date, end_date, tech_stack) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt = $this->conn->prepare("INSERT INTO internships (student_id, company_name, type, start_date, end_date, tech_stack) VALUES (?, ?, ?, ?, ?, ?)");
             return $stmt->execute([
                 $internship->getStudentId(),
                 $internship->getCompanyName(),
@@ -115,13 +83,8 @@ class internshipdao {
     }
 
     public function updateInternship(Internship $internship) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return false;
-        }
-
         try {
-            $stmt = $conn->prepare("UPDATE internships SET student_id = ?, company_name = ?, type = ?, start_date = ?, end_date = ?, tech_stack = ? WHERE id = ?");
+            $stmt = $this->conn->prepare("UPDATE internships SET student_id = ?, company_name = ?, type = ?, start_date = ?, end_date = ?, tech_stack = ? WHERE id = ?");
             return $stmt->execute([
                 $internship->getStudentId(),
                 $internship->getCompanyName(),
@@ -138,13 +101,8 @@ class internshipdao {
     }
 
     public function deleteInternship($id) {
-        $conn = $this->connect();
-        if (!$conn) {
-            return false;
-        }
-
         try {
-            $stmt = $conn->prepare("DELETE FROM internships WHERE id = ?");
+            $stmt = $this->conn->prepare("DELETE FROM internships WHERE id = ?");
             return $stmt->execute([$id]);
         } catch (PDOException $e) {
             error_log("Erreur deleteInternship: " . $e->getMessage());
@@ -153,13 +111,8 @@ class internshipdao {
     }
 
     public function countInternships() {
-        $conn = $this->connect();
-        if (!$conn) {
-            return 0;
-        }
-
         try {
-            $stmt = $conn->query("SELECT COUNT(*) FROM internships");
+            $stmt = $this->conn->query("SELECT COUNT(*) FROM internships");
             return (int) $stmt->fetchColumn();
         } catch (PDOException $e) {
             return 0;
@@ -167,16 +120,12 @@ class internshipdao {
     }
 
     public function countActiveInternships() {
-        $conn = $this->connect();
-        if (!$conn) {
-            return 0;
-        }
-
         try {
-            $stmt = $conn->query("SELECT COUNT(*) FROM internships WHERE end_date >= CURDATE()");
+            $stmt = $this->conn->query("SELECT COUNT(*) FROM internships WHERE end_date >= CURDATE()");
             return (int) $stmt->fetchColumn();
         } catch (PDOException $e) {
             return 0;
         }
     }
 }
+
